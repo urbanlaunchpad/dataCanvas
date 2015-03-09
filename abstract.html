@@ -14,7 +14,7 @@
             width: 100%;
             overflow: hidden;
             font-family: 'Open Sans', sans-serif;
-            font-size: 40px;
+            font-size: 30px;
         }
         #all {
             height: 100vh;
@@ -32,141 +32,177 @@
 
 <div class="row" id="all">
     <div class="col-sm-6" id="diagram">
+
     </div>
     <div class="col-sm-6" id="info">
-        Select a city: Boston
+        <h1>Explore a different city.</h1>
+        <div class="input-group">
+            <div class="input-group-btn">
+            <div class="btn-group">
+                <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                    City Selector <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="#">Bangalore</a></li>
+                    <li><a href="#">Boston</a></li>
+                    <li><a href="#">Geneva</a></li>
+                    <li><a href="#">Rio de Janeiro</a></li>
+                    <li><a href="#">San Francisco</a></li>
+                    <li><a href="#">Shanghai</a></li>
+                    <li><a href="#">Singapore</a></li>
+                </ul>
+            </div>
+            </div>
+            <input type="text" class="form-control" aria-label="...">
+        </div>
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
 <!-- Javascript code that runs our Three.js examples -->
 <script type="text/javascript">
+    var allCities = ['Bangalore', 'Boston', 'Geneva', 'Rio de Janeiro', 'San Francisco', 'Shanghai', 'Singapore'];
 
-	var city = 'San Francisco';
+    createHex = function(city) {
 
-	// date information
-	var now = new Date();
-	var year = now.getFullYear(),
-		month = now.getMonth() + 1,
-		from_day = now.getDate() - 1,
-		day = now.getDate(),
-		hour = now.getHours(),
-		minute = now.getMinutes(),
-		milliseconds = now.getMilliseconds();
-	var from_date = year + '-' + month + '-' + from_day + 'T' + hour + ':' + minute + '-' + milliseconds; console.log(from);
+        // date information
+        var now = new Date();
+        var year = now.getFullYear(),
+            month = now.getMonth() + 1,
+            from_day = now.getDate() - 1,
+            day = now.getDate(),
+            hour = now.getHours(),
+            minute = now.getMinutes(),
+            milliseconds = now.getMilliseconds();
+
+        // clean up date figures
+        if (month < 10) { month = "0" + String(month)};
+        if (from_day < 10) { from_day = "0" + String(from_day)};
+        if (day < 10) { day = "0" + String(day)};
+        if (hour < 10) { hour = "0" + String(hour)};
+        if (minute < 10) { minute = "0" + String(minute)};
+        if (milliseconds < 1000) { milliseconds = "0" + String(milliseconds)};
+
+        var from_date   = year + '-' + month + '-' + from_day + 'T' + hour + ':00:00-0800'; 
+        var before_date = year + '-' + month + '-' + day + 'T' + hour + ':00:00-0800'; console.log(before_date, '2015-03-04T00:00:00-0800');
 
 
-	var from = '2015-03-04T00:00:00-0800',
-		before = '2015-03-05T00:00:00-0800',
-		resolution = '1h',
-		fields = ['temperature','light','airquality_raw','sound','humidity','dust'].join(),
-		url = 'http://sensor-api.localdata.com/api/v1/aggregations?op=mean&over.city=' + city + '&from=' + from + '&before=' + before + '&resolution=' + resolution + '&fields=' + fields;
+        var from = from_date,
+            before = before_date,
+            resolution = '1h',
+            fields = ['temperature','light','airquality_raw','sound','humidity','dust'].join(),
+            url = 'http://sensor-api.localdata.com/api/v1/aggregations?op=mean&over.city=' + city + '&from=' + from + '&before=' + before + '&resolution=' + resolution + '&fields=' + fields;
 
-	$.ajax({url: url})
-	.success( function(data) {
-		var dataArray = data;
-        var svgContainer = d3.select("#diagram") //create container
-                .append("svg")
-                .attr("width", $(window).width())
-                .attr("height", $(window).height());
+        $.ajax({url: url})
+        .success( function(data) {
+            var dataArray = data;
+            var svgContainer = d3.select("#diagram") //create container
+                    .append("svg")
+                    .attr("id", "hex")
+                    .attr("width", $(window).width())
+                    .attr("height", $(window).height());
 
-        var ratios = {
-                temp:  { val: 1, arr: [], },
-                light: { val: 1, arr: [], },
-                air:   { val: 1, arr: [], },
-                sound: { val: 1, arr: [], },
-                humid: { val: 1, arr: [], },
-                dust:  { val: 1, arr: [], },
+            var ratios = {
+                    temp:  { val: 1, arr: [], },
+                    light: { val: 1, arr: [], },
+                    air:   { val: 1, arr: [], },
+                    sound: { val: 1, arr: [], },
+                    humid: { val: 1, arr: [], },
+                    dust:  { val: 1, arr: [], },
+                };
+
+            for (var i = 0; i < dataArray.data.length; i++) {
+                var each     = dataArray.data[i];
+                ratios.temp.arr.push(each.temperature); 
+                ratios.light.arr.push(each.light); 
+                ratios.air.arr.push(each.airquality_raw);
+                ratios.sound.arr.push(each.sound);
+                ratios.humid.arr.push(each.humidity);
+                ratios.dust.arr.push(each.dust);
+            }
+
+            for (attr in ratios) {
+                var diff = Math.max(ratios[attr].arr) - Math.min(ratios[attr].arr);
+                var sum = ratios[attr].arr.reduce(function(a, b) { return a + b; });
+                ratios[attr].val = 150/(sum / ratios[attr].arr.length);
+                console.log(150/(sum / ratios[attr].arr.length));
             };
 
-        for (var i = 0; i < dataArray.data.length; i++) {
-            var each     = dataArray.data[i];
-            ratios.temp.arr.push(each.temperature); 
-            ratios.light.arr.push(each.light); 
-            ratios.air.arr.push(each.airquality_raw);
-            ratios.sound.arr.push(each.sound);
-            ratios.humid.arr.push(each.humidity);
-            ratios.dust.arr.push(each.dust);
-        }
+            for (var i = 0; i < dataArray.data.length; i++) {
+                var each     = dataArray.data[i];
+                var temp     = Math.min(200, each.temperature     *ratios.temp.val),
+                    light    = Math.min(200, each.light           *ratios.light.val),
+                    air      = Math.min(200, each.airquality_raw  *ratios.air.val),
+                    sound    = Math.min(200, each.sound           *ratios.sound.val),
+                    humid    = Math.min(200, each.humidity        *ratios.humid.val),
+                    dust     = Math.min(200, each.dust            *ratios.dust.val);
 
-        for (attr in ratios) {
-            var diff = Math.max(ratios[attr].arr) - Math.min(ratios[attr].arr);
-            var sum = ratios[attr].arr.reduce(function(a, b) { return a + b; });
-            ratios[attr].val = 150/(sum / ratios[attr].arr.length);
-            console.log(150/(sum / ratios[attr].arr.length));
-        };
+                ratios.temp.arr.push(temp); 
+                ratios.light.arr.push(light); 
+                ratios.air.arr.push(air);
+                ratios.sound.arr.push(sound);
+                ratios.humid.arr.push(humid);
+                ratios.dust.arr.push(dust);
 
-        for (var i = 0; i < dataArray.data.length; i++) {
-            var each     = dataArray.data[i];
-            var temp     = Math.min(200, each.temperature     *ratios.temp.val),
-                light    = Math.min(200, each.light           *ratios.light.val),
-                air      = Math.min(200, each.airquality_raw  *ratios.air.val),
-                sound    = Math.min(200, each.sound           *ratios.sound.val),
-                humid    = Math.min(200, each.humidity        *ratios.humid.val),
-                dust     = Math.min(200, each.dust            *ratios.dust.val);
+                var _s32     = (Math.sqrt(3)/2);
+                var xDiff    = $(window).width()/4;
+                var yDiff    = $(window).height()/2;
 
-            ratios.temp.arr.push(temp); 
-            ratios.light.arr.push(light); 
-            ratios.air.arr.push(air);
-            ratios.sound.arr.push(sound);
-            ratios.humid.arr.push(humid);
-            ratios.dust.arr.push(dust);
+                var pointData = [
+                    // X VAR            // Y VAR
+                    [temp+xDiff,        0+yDiff],             // temperature, right            
+                    [(air/2)+xDiff,     air*_s32+yDiff],      // air quality
+                    [-(sound/2)+xDiff,  sound*_s32+yDiff],    // sound
+                    [-humid+xDiff,      0+yDiff],             // humidity
+                    [-(dust/2)+xDiff,   -dust*_s32+yDiff],    // dust
+                    [(light/2)+xDiff,   -light*_s32+yDiff],   // sound
+                    [temp+xDiff,        0+yDiff],
+                ];
 
-            var _s32     = (Math.sqrt(3)/2);
-            var xDiff    = $(window).width()/4;
-            var yDiff    = $(window).height()/2;
+                var enterElement = svgContainer.selectAll("path.area") //draw elements
+                    .data([pointData]).enter().append("path")
+                    .style("fill", "#FFFFFF")
+                    .style("fill-opacity", 0.05)
+                    .style("stroke", "#FFFFFF")
+                    .style("stroke-width", "0.15px")
+                    .attr("d", d3.svg.line());
 
-            var pointData = [
-                // X VAR            // Y VAR
-                [temp+xDiff,        0+yDiff],             // temperature, right            
-                [(air/2)+xDiff,     air*_s32+yDiff],      // air quality
-                [-(sound/2)+xDiff,  sound*_s32+yDiff],    // sound
-                [-humid+xDiff,      0+yDiff],             // humidity
-                [-(dust/2)+xDiff,   -dust*_s32+yDiff],    // dust
-                [(light/2)+xDiff,   -light*_s32+yDiff],   // sound
-                [temp+xDiff,        0+yDiff],
-            ];
+                if (i < 1) {
+                    enterElement.style("stroke", "#FFFFFF")
+                        .style("stroke-width", "2px")
+                }
+            };
 
-            var enterElement = svgContainer.selectAll("path.area") //draw elements
-                .data([pointData]).enter().append("path")
-                .style("fill", "#FFFFFF")
-                .style("fill-opacity", 0.05)
-                .style("stroke", "#FFFFFF")
-                .style("stroke-width", "0.15px")
-                .attr("d", d3.svg.line());
+            // Get the weather
+            var weather_url = "http://api.openweathermap.org/data/2.5/weather?q=" + city
+            $.ajax({url: weather_url})
+            .success( function(data) { console.log(data);
+                // Add the SVG Text Element to the svgContainer
+                svgContainer.selectAll("path.area")
+                    .data([[]]).enter().append("text")
+                    .attr("x", $(window).width()/4)
+                    .attr("y", $(window).height()/2 + 20)
+                    .attr("text-anchor", "middle")
+                    .text( parseInt(data.weather[0].icon, 10) )
+                    .attr("font-family", "sans-serif")
+                    .attr("font-size", "100px")
+                    .attr("fill", "white")
+                svgContainer.selectAll("path.area")
+                    .data([[]]).enter().append("text")
+                    .attr("x", $(window).width()/4)
+                    .attr("y", $(window).height()/2 + 50)
+                    .attr("text-anchor", "middle")
+                    .text( data.weather[0].description )
+                    .attr("font-family", "sans-serif")
+                    .attr("font-size", "20px")
+                    .attr("fill", "white")
+            })
+        });
+    }
 
-            if (i < 1) {
-                enterElement.style("stroke", "#FFFFFF")
-                    .style("stroke-width", "2px")
-            }
-        };
-
-        // Get the weather
-        var weather_url = "http://api.openweathermap.org/data/2.5/weather?q=Boston"
-        $.ajax({url: weather_url})
-        .success( function(data) {
-            // Add the SVG Text Element to the svgContainer
-            svgContainer.selectAll("path.area")
-                .data([[]]).enter().append("text")
-                .attr("x", $(window).width()/4)
-                .attr("y", $(window).height()/2 + 20)
-                .attr("text-anchor", "middle")
-                .text( parseInt(data.weather[0].icon, 10) )
-                .attr("font-family", "sans-serif")
-                .attr("font-size", "100px")
-                .attr("fill", "white")
-            svgContainer.selectAll("path.area")
-                .data([[]]).enter().append("text")
-                .attr("x", $(window).width()/4)
-                .attr("y", $(window).height()/2 + 60)
-                .attr("text-anchor", "middle")
-                .text( data.weather[0].main )
-                .attr("font-family", "sans-serif")
-                .attr("font-size", "30px")
-                .attr("fill", "white")
-        })
-    });
+    createHex('Bangalore');
 
 </script>
 </body>
