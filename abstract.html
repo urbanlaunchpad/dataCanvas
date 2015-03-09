@@ -20,39 +20,77 @@
 <script type="text/javascript">
 
 	var city = 'San Francisco';
-	var from = '2015-02-04T00:00:00-0800';
-	var before = '2015-02-05T00:00:00-0800';
+	var from = '2015-03-04T00:00:00-0800';
+	var before = '2015-03-05T00:00:00-0800';
 	var resolution = '1h';
-	var fields = 'temperature,humidity';
+	var fields = ['temperature','light','airquality_raw','sound','humidity','dust'].join(',');
 	var url = 'http://sensor-api.localdata.com/api/v1/aggregations?op=mean&over.city=' + city + '&from=' + from + '&before=' + before + '&resolution=' + resolution + '&fields=' + fields;
 
 	$.ajax({url: url})
 	.success(function(data) {
-		console.log(data);
-	});
+		var dataArray = data;
+        console.log(dataArray);
+        var svgContainer = d3.select("body") //create container
+                .append("svg")
+                .attr("width", $(window).width())
+                .attr("height", $(window).height());
 
-    var _s32 = (Math.sqrt(3)/2);
-    var A = 25;
-    var xDiff = 200;
-    var yDiff = 200;
-    var pointData = [
-    	[A+xDiff, 0+yDiff],
-    	[A+xDiff, 0+yDiff],
-    	[A/2+xDiff, A*_s32+yDiff], 
-    	[-A/2+xDiff, A*_s32+yDiff], 
-    	[-A+xDiff, 0+yDiff],
-    	[-A/2+xDiff, -A*_s32+yDiff], 
-    	[A/2+xDiff, -A*_s32+yDiff]
-    ];
-    var svgContainer = d3.select("body") //create container
-            .append("svg")
-            .attr("width", 1000)
-            .attr("height", 1000);
+        var arr_temp     = [],
+            arr_light    = [],
+            arr_air      = [],
+            arr_sound    = [],
+            arr_humid    = [],
+            arr_dust     = [];
 
-    var enterElements = svgContainer.selectAll("path.area") //draw elements
-            .data([pointData]).enter().append("path")
-            .style("fill", "#ff0000")
-            .attr("d", d3.svg.line());
+        for (var i = 0; i < dataArray.data.length; i++) {
+            var each     = dataArray.data[i];
+            var temp     = Math.min(200, each.temperature     *10.2),
+                light    = Math.min(200, each.light           *2.10),
+                air      = Math.min(200, each.airquality_raw  *8.15),
+                sound    = Math.min(200, each.sound           *1.00),
+                humid    = Math.min(200, each.humidity        *4.00),
+                dust     = Math.min(200, each.dust            *2.00);
+
+            arr_temp.push(temp); 
+            arr_light.push(light); 
+            arr_air.push(air);
+            arr_sound.push(sound);
+            arr_humid.push(humid);
+            arr_dust.push(dust);
+
+            var _s32     = (Math.sqrt(3)/2);
+            var xDiff    = 450;
+            var yDiff    = 250;
+
+            var pointData = [
+                // X VAR            // Y VAR
+                [temp+xDiff,        0+yDiff],               // temperature, right            
+                [(air/2)+xDiff,     air*_s32+yDiff],     // air quality
+                [-(sound/2)+xDiff,  sound*_s32+yDiff],      // sound
+                [-humid+xDiff,      0+yDiff],               // humidity
+                [-(dust/2)+xDiff,   -dust*_s32+yDiff],      // dust
+                [(light/2)+xDiff,   -light*_s32+yDiff],      // sound
+                [temp+xDiff,        0+yDiff],
+            ];
+
+            var enterElements = svgContainer.selectAll("path.area") //draw elements
+                    .data([pointData]).enter().append("path")
+                    .style("fill", "#3333ff")
+                    .style("fill-opacity", 0.025)
+                    .attr("d", d3.svg.line());
+
+            if (i < 1) {
+                enterElements.style("stroke", "#3333ff")
+            }
+        }
+
+        all = [arr_temp, arr_light, arr_air, arr_sound, arr_humid, arr_dust];
+        for (var i = 0; i < all.length; i++) {
+            var sum = all[i].reduce(function(a, b) { return a + b; });
+            console.log(200/(sum / all[i].length));
+        }
+    });
+
 </script>
 </body>
 </html>
