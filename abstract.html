@@ -4,22 +4,46 @@
 
 <head>
     <title>Example 02.05 - Custom geometry</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+
     <style>
-        body{
-            /* set margin to 0 and overflow to hidden, to go fullscreen */
-            margin: 0;
+        html, body{
+            background-color:  #5AC2E7;
+            height: 100%;
+            width: 100%;
             overflow: hidden;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 40px;
+        }
+        #all {
+            height: 100vh;
+        }
+        #info {
+            height: 100%;
+            padding: 25px;
+            color: #5AC2E7;
+            background-color: #FFF;
         }
     </style>
+
 </head>
 <body>
 
+<div class="row" id="all">
+    <div class="col-sm-6" id="diagram">
+    </div>
+    <div class="col-sm-6" id="info">
+        Select a city: Boston
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <!-- Javascript code that runs our Three.js examples -->
 <script type="text/javascript">
 
-	var city = 'San Francisco';
+	var city = 'Boston';
 	var from = '2015-03-04T00:00:00-0800';
 	var before = '2015-03-05T00:00:00-0800';
 	var resolution = '1h';
@@ -27,68 +51,108 @@
 	var url = 'http://sensor-api.localdata.com/api/v1/aggregations?op=mean&over.city=' + city + '&from=' + from + '&before=' + before + '&resolution=' + resolution + '&fields=' + fields;
 
 	$.ajax({url: url})
-	.success(function(data) {
+	.success( function(data) {
 		var dataArray = data;
-        console.log(dataArray);
-        var svgContainer = d3.select("body") //create container
+        var svgContainer = d3.select("#diagram") //create container
                 .append("svg")
                 .attr("width", $(window).width())
                 .attr("height", $(window).height());
 
-        var arr_temp     = [],
-            arr_light    = [],
-            arr_air      = [],
-            arr_sound    = [],
-            arr_humid    = [],
-            arr_dust     = [];
+        var ratios = {
+                temp:  { val: 1, arr: [], },
+                light: { val: 1, arr: [], },
+                air:   { val: 1, arr: [], },
+                sound: { val: 1, arr: [], },
+                humid: { val: 1, arr: [], },
+                dust:  { val: 1, arr: [], },
+            };
 
         for (var i = 0; i < dataArray.data.length; i++) {
             var each     = dataArray.data[i];
-            var temp     = Math.min(200, each.temperature     *10.2),
-                light    = Math.min(200, each.light           *2.10),
-                air      = Math.min(200, each.airquality_raw  *8.15),
-                sound    = Math.min(200, each.sound           *1.00),
-                humid    = Math.min(200, each.humidity        *4.00),
-                dust     = Math.min(200, each.dust            *2.00);
+            ratios.temp.arr.push(each.temperature); 
+            ratios.light.arr.push(each.light); 
+            ratios.air.arr.push(each.airquality_raw);
+            ratios.sound.arr.push(each.sound);
+            ratios.humid.arr.push(each.humidity);
+            ratios.dust.arr.push(each.dust);
+        }
 
-            arr_temp.push(temp); 
-            arr_light.push(light); 
-            arr_air.push(air);
-            arr_sound.push(sound);
-            arr_humid.push(humid);
-            arr_dust.push(dust);
+        for (attr in ratios) {
+            var diff = Math.max(ratios[attr].arr) - Math.min(ratios[attr].arr);
+            var sum = ratios[attr].arr.reduce(function(a, b) { return a + b; });
+            ratios[attr].val = 150/(sum / ratios[attr].arr.length);
+            console.log(150/(sum / ratios[attr].arr.length));
+        };
+
+        for (var i = 0; i < dataArray.data.length; i++) {
+            var each     = dataArray.data[i];
+            var temp     = Math.min(200, each.temperature     *ratios.temp.val),
+                light    = Math.min(200, each.light           *ratios.light.val),
+                air      = Math.min(200, each.airquality_raw  *ratios.air.val),
+                sound    = Math.min(200, each.sound           *ratios.sound.val),
+                humid    = Math.min(200, each.humidity        *ratios.humid.val),
+                dust     = Math.min(200, each.dust            *ratios.dust.val);
+
+            ratios.temp.arr.push(temp); 
+            ratios.light.arr.push(light); 
+            ratios.air.arr.push(air);
+            ratios.sound.arr.push(sound);
+            ratios.humid.arr.push(humid);
+            ratios.dust.arr.push(dust);
 
             var _s32     = (Math.sqrt(3)/2);
-            var xDiff    = 450;
-            var yDiff    = 250;
+            var xDiff    = $(window).width()/4;
+            var yDiff    = $(window).height()/2;
 
             var pointData = [
                 // X VAR            // Y VAR
-                [temp+xDiff,        0+yDiff],               // temperature, right            
-                [(air/2)+xDiff,     air*_s32+yDiff],     // air quality
-                [-(sound/2)+xDiff,  sound*_s32+yDiff],      // sound
-                [-humid+xDiff,      0+yDiff],               // humidity
-                [-(dust/2)+xDiff,   -dust*_s32+yDiff],      // dust
-                [(light/2)+xDiff,   -light*_s32+yDiff],      // sound
+                [temp+xDiff,        0+yDiff],             // temperature, right            
+                [(air/2)+xDiff,     air*_s32+yDiff],      // air quality
+                [-(sound/2)+xDiff,  sound*_s32+yDiff],    // sound
+                [-humid+xDiff,      0+yDiff],             // humidity
+                [-(dust/2)+xDiff,   -dust*_s32+yDiff],    // dust
+                [(light/2)+xDiff,   -light*_s32+yDiff],   // sound
                 [temp+xDiff,        0+yDiff],
             ];
 
-            var enterElements = svgContainer.selectAll("path.area") //draw elements
-                    .data([pointData]).enter().append("path")
-                    .style("fill", "#3333ff")
-                    .style("fill-opacity", 0.025)
-                    .attr("d", d3.svg.line());
+            var enterElement = svgContainer.selectAll("path.area") //draw elements
+                .data([pointData]).enter().append("path")
+                .style("fill", "#FFFFFF")
+                .style("fill-opacity", 0.05)
+                .style("stroke", "#FFFFFF")
+                .style("stroke-width", "0.15px")
+                .attr("d", d3.svg.line());
 
             if (i < 1) {
-                enterElements.style("stroke", "#3333ff")
+                enterElement.style("stroke", "#FFFFFF")
+                    .style("stroke-width", "2px")
             }
-        }
+        };
 
-        all = [arr_temp, arr_light, arr_air, arr_sound, arr_humid, arr_dust];
-        for (var i = 0; i < all.length; i++) {
-            var sum = all[i].reduce(function(a, b) { return a + b; });
-            console.log(200/(sum / all[i].length));
-        }
+        // Get the weather
+        var weather_url = "http://api.openweathermap.org/data/2.5/weather?q=Boston"
+        $.ajax({url: weather_url})
+        .success( function(data) {
+            // Add the SVG Text Element to the svgContainer
+            svgContainer.selectAll("path.area")
+                .data([[]]).enter().append("text")
+                .attr("x", $(window).width()/4)
+                .attr("y", $(window).height()/2 + 20)
+                .attr("text-anchor", "middle")
+                .text( parseInt(data.weather[0].icon, 10) )
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "100px")
+                .attr("fill", "white")
+            svgContainer.selectAll("path.area")
+                .data([[]]).enter().append("text")
+                .attr("x", $(window).width()/4)
+                .attr("y", $(window).height()/2 + 60)
+                .attr("text-anchor", "middle")
+                .text( data.weather[0].main )
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "30px")
+                .attr("fill", "white")
+        })
     });
 
 </script>
