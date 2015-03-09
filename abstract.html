@@ -20,11 +20,24 @@
 <script type="text/javascript">
 
 	var city = 'San Francisco';
-	var from = '2015-02-04T00:00:00-0800';
-	var before = '2015-02-05T00:00:00-0800';
-	var resolution = '1h';
-	var fields = 'temperature,humidity';
-	var url = 'http://sensor-api.localdata.com/api/v1/aggregations?op=mean&over.city=' + city + '&from=' + from + '&before=' + before + '&resolution=' + resolution + '&fields=' + fields;
+
+	// date information
+	var now = new Date();
+	var year = now.getFullYear(),
+		month = now.getMonth() + 1,
+		from_day = now.getDate() - 1,
+		day = now.getDate(),
+		hour = now.getHours(),
+		minute = now.getMinutes(),
+		milliseconds = now.getMilliseconds();
+	var from_date = year + '-' + month + '-' + from_day + 'T' + hour + ':' + minute + '-' + milliseconds; console.log(from);
+
+
+	var from = '2015-03-04T00:00:00-0800',
+		before = '2015-03-05T00:00:00-0800',
+		resolution = '1h',
+		fields = ['temperature','light','airquality_raw','sound','humidity','dust'].join(),
+		url = 'http://sensor-api.localdata.com/api/v1/aggregations?op=mean&over.city=' + city + '&from=' + from + '&before=' + before + '&resolution=' + resolution + '&fields=' + fields;
 
 	$.ajax({url: url})
 	.success(function(data) {
