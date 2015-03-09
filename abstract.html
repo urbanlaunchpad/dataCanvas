@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Example 02.05 - Custom geometry</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <style>
+        body{
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Javascript code that runs our Three.js examples -->
+<script type="text/javascript">
+
+	var city = 'San Francisco';
+	var from = '2015-02-04T00:00:00-0800';
+	var before = '2015-02-05T00:00:00-0800';
+	var resolution = '1h';
+	var fields = 'temperature,humidity';
+	var url = 'http://sensor-api.localdata.com/api/v1/aggregations?op=mean&over.city=' + city + '&from=' + from + '&before=' + before + '&resolution=' + resolution + '&fields=' + fields;
+
+	$.ajax({url: url})
+	.success(function(data) {
+		console.log(data);
+	});
+
+    var _s32 = (Math.sqrt(3)/2);
+    var A = 25;
+    var xDiff = 200;
+    var yDiff = 200;
+    var pointData = [
+    	[A+xDiff, 0+yDiff],
+    	[A+xDiff, 0+yDiff],
+    	[A/2+xDiff, A*_s32+yDiff], 
+    	[-A/2+xDiff, A*_s32+yDiff], 
+    	[-A+xDiff, 0+yDiff],
+    	[-A/2+xDiff, -A*_s32+yDiff], 
+    	[A/2+xDiff, -A*_s32+yDiff]
+    ];
+    var svgContainer = d3.select("body") //create container
+            .append("svg")
+            .attr("width", 1000)
+            .attr("height", 1000);
+
+    var enterElements = svgContainer.selectAll("path.area") //draw elements
+            .data([pointData]).enter().append("path")
+            .style("fill", "#ff0000")
+            .attr("d", d3.svg.line());
+</script>
+</body>
+</html>

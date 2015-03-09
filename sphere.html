@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="">
+  <meta name="author" content="Kuan Butts">
+
+  <title>Orb Visualization</title>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+  <style>
+		body{
+			background:hsla(0, 0%, 0%, 1);
+		  background-repeat: no-repeat;
+		  background-attachment: fixed;
+		  background-image: linear-gradient(to right top, hsla(0, 5%,5%, 0.5), hsla(0, 0%, 15%,1));
+			margin: 0;
+		  padding: 0;
+		  overflow: hidden;
+		  width:100%;
+		}
+
+		#sphere {
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: 0;
+			bottom: 0;
+			perspective: 500;
+			transform-style: preserve-3d;
+		}
+
+		.sphere {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			transform-style: preserve-3d;
+		}
+
+		.particle {
+			position: absolute;
+			width: 20px;
+			height: 20px;
+			border-radius: 100px;
+		  background:hsla(170, 95%, 35%, 1);
+			background-size: 100%;
+		  box-shadow: 0 0 50px hsla(0,255%,255%,0.7);
+		}
+
+		#sphere2 .particle {
+			background: hsla(0, 95%, 45%, 1);
+			box-shadow: 0 0 50px hsla(255,0%,255%,0.7);
+		}
+
+		#sphere3 .particle {
+			background:hsla(58, 95%, 55%, 1);
+			box-shadow: 0 0 50px hsla(255,225%,255%,0.5);
+		}
+  </style>
+
+</head>
+
+<body>
+	<div id="sphere">
+		<div id="sphere1" class="sphere"></div>
+		<div id="sphere2" class="sphere"></div>
+		<div id="sphere3" class="sphere"></div>
+	</div>
+</body>
+
+<script type="text/javascript">
+	window.requestAnimFrame = (function(){
+	      return  window.requestAnimationFrame       || 
+	              window.webkitRequestAnimationFrame || 
+	              window.mozRequestAnimationFrame    || 
+	              window.oRequestAnimationFrame      || 
+	              window.msRequestAnimationFrame     || 
+	      function( callback ){
+	          window.setTimeout(callback, 1000 / 60);
+	   };
+	})();
+
+	var max = 80;
+	var off_z = Math.min($(window).width() / 3, $(window).height() / 3);
+	var dia = off_z / 20;
+
+	var prevX= null;
+	var prevY = null
+
+	$(go);
+
+	function go() {
+
+		
+		$('.sphere').each(function() {
+			for (var i = 0; i < max; i++) {
+				var sX = -1 + Math.random() * 2;
+				var sY = -1 + Math.random() * 2;
+				var sZ = -1 + Math.random() * 2;
+				var ang = Math.random() * 360;
+
+				var part = $('<div class="particle"></div>');
+				
+				part
+					.css('width', dia)
+					.css('height', dia)
+					.css('margin', (-dia / 2) + 'px 0 0 ' + (-dia / 2) + 'px')
+					.css('-webkit-transform', 'rotate3d(' + sX + ',' + sY + ',' + sZ + ',' + ang + 'deg) translateZ(' + off_z + 'px)')
+					.css('-moz-transform', 'rotate3d(' + sX + ',' + sY + ',' + sZ + ',' + ang + 'deg) translateZ(' + off_z + 'px)');
+				part.appendTo(this);
+			}
+		});
+		
+		$(document).mousemove(function(e) {
+			if (prevX != null) {
+				var velX = (e.clientX - prevX) * 0.025;
+				var velY = (e.clientY - prevY) * 0.025;
+				var maxVel = velX;
+				
+				if (Math.abs(velX) < Math.abs(velY)) {
+					maxVel = velY;
+				}
+				
+				var s1Vel = $('#sphere1').data('vel');
+				var s2Vel = $('#sphere2').data('vel');
+				var s3Vel = $('#sphere3').data('vel');
+				
+				$('#sphere1').data('vel', s1Vel + velY);
+				$('#sphere2').data('vel', s2Vel + velX);
+				$('#sphere3').data('vel', s3Vel + maxVel);
+			}
+			
+			prevX = e.clientX;
+			prevY = e.clientY;
+		});
+		
+		var body = document.getElementsByTagName('body')[0];
+		body.addEventListener('touchmove', touchMove, false);
+		body.addEventListener('touchstart', touchStart, false);
+		body.addEventListener('touchend', touchEnd, false);
+
+		window.requestAnimFrame(draw);
+	}
+
+	function draw() {
+		var fric = 0.96;
+		var minVel = 0.01;
+		
+		var s1 = $('#sphere1');
+		var s2 = $('#sphere2');
+		var s3 = $('#sphere3');
+		
+		if (s1.data('ang') == null) {
+			s1.data('ang', 0);
+			s2.data('ang', 0);
+			s3.data('ang', 0);
+			s1.data('vel', 3);
+			s2.data('vel', 3);
+			s3.data('vel', 3);
+		}
+		
+		var s1Ang = s1.data('ang');
+		var s2Ang = s2.data('ang');
+		var s3Ang = s3.data('ang');
+		var s1Vel = s1.data('vel');
+		var s2Vel = s2.data('vel');
+		var s3Vel = s3.data('vel');
+		
+		s1Ang = (s1Ang + s1Vel) % 360;
+		s1.data('ang', s1Ang);
+		s1Vel *= fric;
+		if (Math.abs(s1Vel) < minVel) {
+			s1Vel = 0;
+		}
+		else {
+			s1.data('vel', s1Vel);
+			s1.css('-webkit-transform', 'rotateX(' + (-s1Ang) +'deg)');
+			s1.css('-moz-transform', 'rotateX(' + (-s1Ang) +'deg)');
+		}
+
+		s2Ang = (s2Ang + s2Vel) % 360;
+		s2.data('ang', s2Ang);
+		s2Vel *= fric;
+		if (Math.abs(s2Vel) < minVel) {
+			s2Vel = 0;
+		}
+		else {
+			s2.data('vel', s2Vel);
+			s2.css('-webkit-transform', 'rotateY(' + s2Ang +'deg)');
+			s2.css('-moz-transform', 'rotateY(' + s2Ang +'deg)');
+		}
+
+		s3Ang = (s3Ang + s3Vel) % 360;
+		s3.data('ang', s3Ang);
+		s3Vel *= fric;
+		if (Math.abs(s3Vel) < minVel) {
+			s3Vel = 0;
+		}
+		else {
+			s3.data('vel', s3Vel);
+			s3.css('-webkit-transform', 'rotateX(' + (-s3Ang) +'deg) rotateY(' + (-s3Ang) +'deg)');
+			s3.css('-moz-transform', 'rotateX(' + (-s3Ang) +'deg) rotateY(' + (-s3Ang) +'deg)');
+		}
+
+		setTimeout(draw, 25);
+	}
+
+	function touchStart(e) {
+		e.preventDefault();
+	}
+
+	function touchEnd(e) {
+		e.preventDefault();
+	}
+
+	function touchMove(e) {
+		e.preventDefault();
+
+		if (prevX != null) {
+			var velX = (e.touches[0].pageX - prevX) * 0.025;
+			var velY = (e.touches[0].pageY - prevY) * 0.025;
+			var maxVel = velX;
+			
+			if (Math.abs(velX) < Math.abs(velY)) {
+				maxVel = velY;
+			}
+			
+			var s1Vel = $('#sphere1').data('vel');
+			var s2Vel = $('#sphere2').data('vel');
+			var s3Vel = $('#sphere3').data('vel');
+			
+			$('#sphere1').data('vel', s1Vel + velY);
+			$('#sphere2').data('vel', s2Vel + velX);
+			$('#sphere3').data('vel', s3Vel + maxVel);
+		}
+		
+		prevX = e.touches[0].pageX;
+		prevY = e.touches[0].pageY;
+	}
+</script>
