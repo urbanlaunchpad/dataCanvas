@@ -3,9 +3,11 @@
 <html>
 
 <head>
-    <title>Example 02.05 - Custom geometry</title>
+    <title>Data Canvas Entry - Kuan</title>
 
     <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="new_weather.css"> <!-- CodePen source: http://codepen.io/weaintplastic/pen/qEMZbx -->
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" /> <!-- Leaflet -->
 
     <style>
         html, body{
@@ -14,16 +16,57 @@
             width: 100%;
             overflow: hidden;
             font-family: 'Open Sans', sans-serif;
-            font-size: 30px;
+            font-size: 10px;
+        }
+        #map { 
+            position:fixed;
+            width:50%;
+            height:100%;
+            z-index:0;
+            background-color: #FFF;
+            margin: -25px -50px -25px -25px;
+        }
+        #gradient {
+            height: 150px;
+            margin: -25px -50px -125px -25px;
+            background: -webkit-linear-gradient(bottom, rgba(255,255,255,0), rgba(255,255,255,0.6), rgba(255,255,255,1)); /* For Safari 5.1 to 6.0 */
+            background: -o-linear-gradient(     top,    rgba(255,255,255,0), rgba(255,255,255,0.6), rgba(255,255,255,1)); /* For Opera 11.1 to 12.0 */
+            background: -moz-linear-gradient(   top,    rgba(255,255,255,0), rgba(255,255,255,0.6), rgba(255,255,255,1)); /* For Firefox 3.6 to 15 */
+            background: linear-gradient(to      top,    rgba(255,255,255,0), rgba(255,255,255,0.6), rgba(255,255,255,1)); /* Standard syntax (must be last) */
+        }
+        #loader {
+            display: none;
+            position: fixed;
+            left: 25%;
+            zoom: 10;
+            -moz-transform: scale(3);
+        }
+        #city_name {
+            position: absolute;
+            padding: 25px 50px 25px 50px;
+            color: white;
+        }
+        #city_name h1 {
+            font-weight: 700;
         }
         #all {
             height: 100vh;
         }
         #info {
             height: 100%;
-            padding: 25px;
+            padding: 25px 50px 25px 25px;
             color: #5AC2E7;
             background-color: #FFF;
+            box-shadow: 15px 15px 15px 15px rgba(0,0,0,0.25);
+        }
+        svg path {
+            transition: fill 1s ease;
+        }
+        svg:hover path#hex_layers {
+            fill: #282828 !important;
+        }
+        svg:hover path#hex_arrows {
+            fill: #282828 !important;
         }
     </style>
 
@@ -31,42 +74,410 @@
 <body>
 
 <div class="row" id="all">
-    <div class="col-sm-6" id="diagram">
+    
+    <div class="col-sm-6">
+        <div id="city_name">
+            <h1>Bangalore</h1>
+        </div>
 
-    </div>
-    <div class="col-sm-6" id="info">
-        <h1>Explore a different city.</h1>
-        <div class="input-group">
-            <div class="input-group-btn">
-            <div class="btn-group">
-                <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                    City Selector <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href="#">Bangalore</a></li>
-                    <li><a href="#">Boston</a></li>
-                    <li><a href="#">Geneva</a></li>
-                    <li><a href="#">Rio de Janeiro</a></li>
-                    <li><a href="#">San Francisco</a></li>
-                    <li><a href="#">Shanghai</a></li>
-                    <li><a href="#">Singapore</a></li>
-                </ul>
-            </div>
-            </div>
-            <input type="text" class="form-control" aria-label="...">
+        <div id="diagram">
+        </div>
+        <div class="preloader loading" id="loader">
+            <span class="slice"></span>
+            <span class="slice"></span>
+            <span class="slice"></span>
+            <span class="slice"></span>
+            <span class="slice"></span>
+            <span class="slice"></span>
         </div>
     </div>
+    
+    <div class="col-sm-6" id="info">
+        <!-- Leaflet map goes here -->
+        <div id="map"></div>
+
+        <div class="row">
+            <div class="col-sm-12">
+                <div id="gradient"></div> 
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-sm-12">
+                <h2>Checking the weather in a "Smart City."</h2>
+                <div class="input-group">
+                    <div class="input-group-btn">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                City Selector <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu" id="city_list">
+                                <li><a href="#">Bangalore</a></li>
+                                <li><a href="#">Boston</a></li>
+                                <li><a href="#">Geneva</a></li>
+                                <li><a href="#">Rio de Janeiro</a></li>
+                                <li><a href="#">San Francisco</a></li>
+                                <li><a href="#">Shanghai</a></li>
+                                <li><a href="#">Singapore</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <input type="text" class="form-control" aria-label="city_selected" id="city_selected" value="Bangalore">
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
-<!-- Javascript code that runs our Three.js examples -->
+<script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+
 <script type="text/javascript">
-    var allCities = ['Bangalore', 'Boston', 'Geneva', 'Rio de Janeiro', 'San Francisco', 'Shanghai', 'Singapore'];
+    // globals
+    var original_temp;
+    var original_desc;
+    var latlngs = {
+        'Bangalore':      [12.9667, 77.5667],
+        'Boston':         [42.364255, -71.071577],
+        'Geneva':         [46.203188, 6.137050],
+        'Rio de Janeiro': [-22.904355, -43.175893],
+        'San Francisco':  [37.790129, -122.408418],
+        'Shanghai':       [31.244311, 121.479499],
+        'Singapore':      [1.296472, 103.852962],
+    }
+
+    // set up leaflet
+    var map = L.map('map', {zoomControl: false}).setView(latlngs.Bangalore, 12);
+    L.tileLayer('http://{s}.tiles.mapbox.com/v3/kuanb.ipfm8n84/{z}/{x}/{y}.png', {
+        attribution: 'Map data <a href="http://openstreetmap.org">OpenStreetMap</a>, Imagery <a href="http://mapbox.com">Mapbox</a>',
+        maxZoom: 18,
+        opacity: 0.5,
+    }).addTo(map);
+
+    all_sensors = {
+        'San Francisco': {
+            'Urban Launchpad': { 
+                'id': 'ci4yfbbdb000d03zzoq8kjdl0' 
+            },
+            'GlenParklifeLogger': { 
+                'id': 'ci4yhy9yy000f03zznho5nm7c' 
+            },
+            'ClimateNinja9000': { 
+                'id': 'ci4yyrdqi000j03zz8ylornqd' 
+            },
+            'Exploratorium': { 
+                'id': 'ci4vy1tfy000m02s7v29jkkx4' 
+            },
+            'Datavore': { 
+                'id': 'ci4lnqzte000002xpokc9d25v' 
+            },
+            'Grand Theater': { 
+                'id': 'ci4usvy81000302s7whpk8qlp' 
+            },
+            'mapsense': { 
+                'id': 'ci4usvryz000202s7llxjafaf' 
+            },
+            'GehlData': { 
+                'id': 'ci4xcxxgc000n02tci92gpvi6' 
+            },
+            'a-streetcar-named-data-sensor': { 
+                'id': 'ci4usss1t000102s7hkg0rpqg' 
+            },
+            'AlleyCat': { 
+                'id': 'ci4tmxpz8000002w7au38un50' 
+            },
+            'DataDonut': { 
+                'id': 'ci4yf50s5000c03zzt4h2tnsq' 
+            },
+            'grapealope': { 
+                'id': 'ci4ut5zu5000402s7g6nihdn0' 
+            },
+        },
+        'Bangalore': {
+            'MODseeed': { 
+                'id': 'ci53tm6va0001032pzez19tgz' 
+            },
+            'openbangalore': { 
+                'id': 'ci4v3czb7000502s7lnln7ztr' 
+            },
+            'WRI': { 
+                'id': 'ci4yfgz37000e03zzg1a6o6vy' 
+            },
+            'Nextdrop': { 
+                'id': 'ci59onqz2000103z5f90u4k78' 
+            },
+            'DataBrigade': { 
+                'id': 'ci4yae86r000903zzsna9zh30' 
+            },
+            'Laddoo': { 
+                'id': 'ci4xvuiqf000503zz1bah2he8' 
+            },
+            'Palantir': { 
+                'id': 'ci4xs6uhw000403zz9za2guib' 
+            },
+            'Claptrap': { 
+                'id': 'ci541fl410002032pbifg5o7a' 
+            },
+            'sycsmlp1': { 
+                'id': 'ci4zftqww0002032zeskt2yuc' 
+            },
+            'Geekstorm': { 
+                'id': 'ci4x8lumr000l02tco6291y1u' 
+            },
+        },
+        'Boston': {
+            'soldering defect': { 
+                'id': 'ci4x0rtb9000h02tcfa5qov33' 
+            },
+            'Pineapple': { 
+                'id': 'ci4ooqbyw0001021o7p4qiedw' 
+            },
+            'Sproutuino': { 
+                'id': 'ci4xird28000003zzz1soh9fj' 
+            },
+            'monalisa': { 
+                'id': 'ci4ue1845000102w7ni64j7pl' 
+            },
+            'SeeedSensor': { 
+                'id': 'ci4w1npi3000p02s7a43zws7q' 
+            },
+            'badgersense': { 
+                'id': 'ci4vzm23c000o02s76ezwdgxe' 
+            },
+            'Sparkling': { 
+                'id': 'ci4x1uh3q000j02tcnehaazvw' 
+            },
+            'Euclid': { 
+                'id': 'ci5a6lluy000303z5d02xla24' 
+            },
+            'firehazard': { 
+                'id': 'ci530o426000003v9a6uxvc2l' 
+            },
+            'Home1': { 
+                'id': 'ci4rb6392000102wddchkqctq' 
+            },
+            'theperch': { 
+                'id': 'ci4qaiat7000002wdidwagmmb' 
+            },
+            'Richard': { 
+                'id': 'ci4vv79v9000k02s7n4avp69i' 
+            },
+            'Gabe Sensor': { 
+                'id': 'ci4w3emre000002tcnpko08o3' 
+            },
+        },
+        'Geneva': {
+            'Geneva16': { 
+                'id': 'ci4lr75ve000c02ypnfy0qt8n' 
+            },
+            'Geneva6': { 
+                'id': 'ci4lr75ok000302yp9dowz3rm' 
+            },
+            'Geneva7': { 
+                'id': 'ci4lr75sm000902ypns4q30xy' 
+            },
+            "Laconn'air": 'ci4lr75sf000602ypyfkxnua3',
+            'OpiOneKenopi': { 
+                'id': 'ci4lr75sl000802ypo4qrcjda' 
+            },
+            'Orion': { 
+                'id': 'ci4lr75ob000102yphtjj75f5' 
+            },
+            'metabolo': { 
+                'id': 'ci4lr75o6000002yp6eolj0rm' 
+            },
+            'makegeneve': { 
+                'id': 'ci4lr75oi000202ypmtgrudhs' 
+            },
+            'Geneva11': { 
+                'id': 'ci4lr75vd000b02ypdlm6qbly' 
+            },
+            'LEClife': { 
+                'id': 'ci4lr75v6000a02ypa256zigk' 
+            },
+            'Geneva14': { 
+                'id': 'ci4lr75se000502ypjgleg6kj' 
+            },
+            'Geneva15': { 
+                'id': 'ci4lr75wi000e02yp5ek72zcr' 
+            },
+        },
+        'Rio de Janeiro': {
+            'Crisp Cookie': { 
+                'id': 'ci4vxorfp000l02s7nv4mlefu' 
+            },
+            'Rio40': { 
+                'id': 'ci4vjer3i000e02s7r2cj23gs' 
+            },
+            'PadulaNiteroiRJ': { 
+                'id': 'ci4vye225000n02s7rxjdfxa1' 
+            },
+            'coppentt': { 
+                'id': 'ci5a2vxxf000203z5tenrtp4g' 
+            },
+            'BarraDaTijucaCanvas': { 
+                'id': 'ci4q0adco000002t9qu491siy' 
+            },
+            'Kennyduino': { 
+                'id': 'ci4xkmrkk000103zzm94zdsu4' 
+            },
+            'swissnexbrazil': { 
+                'id': 'ci4oethyi000302ymejc2wc2j' 
+            },
+            'OurHomeMakerSpace DataCanvas@Rio': { 
+                'id': 'ci4sn1zfb000102wetn54eux9' 
+            },
+            'BarmaCanvas': { 
+                'id': 'ci4symwpg000402wejp5hagiv' 
+            },
+            'GaveaDataCanvas': { 
+                'id': 'ci4wsj9if000c02tcrquen3bl' 
+            },
+            'valeriab': { 
+                'id': 'ci4yf41wg000b03zz1sg9c2yb' 
+            },
+            'Cavalo': { 
+                'id': 'ci50huz75000003whywxrn4wx' 
+            },
+            'Olabi': { 
+                'id': 'ci4x6nzle000k02tckylmop2g' 
+            },
+            'nico': { 
+                'id': 'ci4q2f9cr000102t9di6kx27u' 
+            }
+        },
+        'Shanghai': {
+            'james': { 
+                'id': 'ci5c3vgzv000003v4deetujpe' 
+            },
+            'penguin': { 
+                'id': 'ci4vk908n000h02s7pqy6aud3' 
+            },
+            'WGQ': { 
+                'id': 'ci4w9izto000302tcgj9hmy9m' 
+            },
+            'frogsh': { 
+                'id': 'ci4wmzegn000702tcc6dn993o' 
+            },
+            'fraserxu': { 
+                'id': 'ci4s0caqw000002wey2s695ph' 
+            },
+            'SASPudong': { 
+                'id': 'ci4xdbcwd000o02tcoi729rb7' 
+            },
+            'transistor': { 
+                'id': 'ci4xrkkxy000203zz2qz5x2qt' 
+            },
+            'JiadingSensor': { 
+                'id': 'ci4z8a9d10001032zk4mh5qow' 
+            },
+            'xinchejian': { 
+                'id': 'ci521nmr600020347n4s107yh' 
+            },
+            "Simon's All Knowing Box": 'ci525hppb00030347n3qo265c',
+            'TheMarms': { 
+                'id': 'ci527ripa000403471yii8wim' 
+            },
+            'chinotto': { 
+                'id': 'ci4yd6rfl000a03zzycxw5inl' 
+            }
+        },
+        'Singapore': {
+            'SECSensor': { 
+                'id': 'ci4v5vrcu000602s7g2cur4b2' 
+            },
+            'HackerspaceSGSeeed': { 
+                'id': 'ci4y9ght2000803zzrj61j1nl' 
+            },
+            'Durianz': { 
+                'id': 'ci599v4yf000003z5b4ovspob' 
+            },
+            'sg_hougang_61': { 
+                'id': 'ci4v67rh8000902s7vcxxq6wt' 
+            },
+            'The ThunderBolt': { 
+                'id': 'ci4y4ohu3000703zzy0fxkd5n' 
+            },
+            'NorthStarOne': { 
+                'id': 'ci4vejnju000b02s70yzzonp9' 
+            },
+            'Aislinnn': { 
+                'id': 'ci5lssf4x000003x8j2karv47' 
+            },
+            'ghimmohyandao': { 
+                'id': 'ci4wyckhv000f02tcyojovuvr' 
+            },
+            'mm@alexandra': { 
+                'id': 'ci4wq5cf6000a02tci6u38edj' 
+            },
+            'Gecko': { 
+                'id': 'ci52039km00010347y1k3z1u4' 
+            },
+            'swissnexSG': { 
+                'id': 'ci4wg4xti000502tccs34dvk4' 
+            },
+            'HPSG730864': { 
+                'id': 'ci4w8gd6f000102tcnp415mz5' 
+            },
+            'reversehaven': { 
+                'id': 'ci516u6u8000203wht0ml6o9c' 
+            },
+            'rpbaltazar@bukit-timah': { 
+                'id': 'ci4v5wwl4000702s7t1u7rz4a' 
+            },
+        },
+    }
+
+    // add markers to leaflet
+    var all_sensor_locations = {};
+    for (sensor in all_sensors) {
+        for (sensorID in all_sensors[sensor]) {
+            var sensorURL = "http://sensor-api.localdata.com/api/v1/sources/" + all_sensors[sensor][sensorID]['id'] + "/entries?" +
+                "from=2015-03-05T00:00:00-0800" + 
+                "&before=2015-03-10T00:00:00-0800";
+            $.ajax({url:sensorURL})
+            .success( function(data) {
+                if (data.data.length > 0) {
+                    var location = data.data[0]['data']['location'];
+                    var lat = location[1];
+                    var lng = location[0];
+                    var circle = L.circle([lat, lng], 250, {
+                        weight: 0,
+                        fillColor: '#5AC2E7',
+                        fillOpacity: 0.5,
+                    }).addTo(map);
+                    all_sensors[sensor][sensorID]['location'] = { 'lat': lat, 'lng': lng }
+                }
+            });
+        }
+    }
+
+    $('#city_list li').on('click', function(){
+        var chosen = $(this).text();
+        $('#city_selected').val(chosen);
+        updateHex(chosen);
+    });
+
+    updateHex = function(city) {
+        // initial action
+        $('#loader').show();
+        setTimeout( function () {
+            $('#diagram').empty();
+            map.panTo(new L.LatLng(latlngs[city][0], latlngs[city][1]));
+            // run update
+            createHex(city);
+            setTimeout( function () {
+                // final action
+                $('#city_name h1').text(city)
+                $('#loader').fadeOut();  
+            }, 500)
+        }, 500)
+    }
 
     createHex = function(city) {
-
         // date information
         var now = new Date();
         var year = now.getFullYear(),
@@ -86,7 +497,7 @@
         if (milliseconds < 1000) { milliseconds = "0" + String(milliseconds)};
 
         var from_date   = year + '-' + month + '-' + from_day + 'T' + hour + ':00:00-0800'; 
-        var before_date = year + '-' + month + '-' + day + 'T' + hour + ':00:00-0800'; console.log(before_date, '2015-03-04T00:00:00-0800');
+        var before_date = year + '-' + month + '-' + day + 'T' + hour + ':00:00-0800';
 
 
         var from = from_date,
@@ -126,25 +537,17 @@
             for (attr in ratios) {
                 var diff = Math.max(ratios[attr].arr) - Math.min(ratios[attr].arr);
                 var sum = ratios[attr].arr.reduce(function(a, b) { return a + b; });
-                ratios[attr].val = 150/(sum / ratios[attr].arr.length);
-                console.log(150/(sum / ratios[attr].arr.length));
+                ratios[attr].val = 100/(sum / ratios[attr].arr.length);
             };
 
-            for (var i = 0; i < dataArray.data.length; i++) {
+            for (var i = dataArray.data.length-1; i >= 0 ; i--) {
                 var each     = dataArray.data[i];
-                var temp     = Math.min(200, each.temperature     *ratios.temp.val),
-                    light    = Math.min(200, each.light           *ratios.light.val),
-                    air      = Math.min(200, each.airquality_raw  *ratios.air.val),
-                    sound    = Math.min(200, each.sound           *ratios.sound.val),
-                    humid    = Math.min(200, each.humidity        *ratios.humid.val),
-                    dust     = Math.min(200, each.dust            *ratios.dust.val);
-
-                ratios.temp.arr.push(temp); 
-                ratios.light.arr.push(light); 
-                ratios.air.arr.push(air);
-                ratios.sound.arr.push(sound);
-                ratios.humid.arr.push(humid);
-                ratios.dust.arr.push(dust);
+                var temp     = Math.min(200, each.temperature     *ratios.temp.val  + 50),
+                    light    = Math.min(200, each.light           *ratios.light.val + 50),
+                    air      = Math.min(200, each.airquality_raw  *ratios.air.val   + 50),
+                    sound    = Math.min(200, each.sound           *ratios.sound.val + 50),
+                    humid    = Math.min(200, each.humidity        *ratios.humid.val + 50),
+                    dust     = Math.min(200, each.dust            *ratios.dust.val  + 50);
 
                 var _s32     = (Math.sqrt(3)/2);
                 var xDiff    = $(window).width()/4;
@@ -167,39 +570,124 @@
                     .style("fill-opacity", 0.05)
                     .style("stroke", "#FFFFFF")
                     .style("stroke-width", "0.15px")
-                    .attr("d", d3.svg.line());
+                    .attr("d", d3.svg.line())
+                    .attr("id", "hex_layers");
 
                 if (i < 1) {
                     enterElement.style("stroke", "#FFFFFF")
-                        .style("stroke-width", "2px")
+                    enterElement.style("stroke-width", "2px")
+
+                    var names = ['temperature','airquality_raw','sound','humidity','dust','light','temperature'];
+                    // now add circles for each edge
+                    for (var corner = 0; corner < pointData.length; corner++) {
+                        var corner_name = names[corner];
+
+                        var endpoint_x, endpoint_y;
+                        var x_ratio = (pointData[corner][0]-xDiff)/(pointData[corner][1]-yDiff);
+                        var y_ratio = (pointData[corner][1]-yDiff)/(pointData[corner][0]-xDiff);
+
+                        if (pointData[corner][1]-yDiff == 0) {
+                            x_ratio = 1;
+                            y_ratio = 0;
+                        }
+
+                        if (pointData[corner][0] >= xDiff && pointData[corner][1] >= yDiff) {
+                            endpoint_x = pointData[corner][0]+(x_ratio*25);
+                            endpoint_y = pointData[corner][1]+(y_ratio*25);
+                        }
+                        if (pointData[corner][0] <= xDiff && pointData[corner][1] <= yDiff) {
+                            endpoint_x = pointData[corner][0]-(x_ratio*25);
+                            endpoint_y = pointData[corner][1]-(y_ratio*25);
+                        }
+                        if (pointData[corner][0] > xDiff && pointData[corner][1] < yDiff) {
+                            endpoint_x = pointData[corner][0]-(x_ratio*25);
+                            endpoint_y = pointData[corner][1]+(y_ratio*25);
+                        }
+                        if (pointData[corner][0] < xDiff && pointData[corner][1] > yDiff) {
+                            endpoint_x = pointData[corner][0]+(x_ratio*25);
+                            endpoint_y = pointData[corner][1]-(y_ratio*25);
+                        }
+
+                        var branch = [ [pointData[corner][0], pointData[corner][1] ],
+                                     [ endpoint_x, endpoint_y ]
+                        ];
+
+                        svgContainer.selectAll("path.area") //draw elements
+                            .data([branch]).enter().append("path")
+                            .style("fill", "#FFFFFF")
+                            .style("fill-opacity", 0.05)
+                            .style("stroke", "#FFFFFF")
+                            .style("stroke-width", "1px")
+                            .attr("d", d3.svg.line())
+                            .attr("id", "hex_arrows");
+                            .attr("hidden", "");
+
+
+                        svgContainer.selectAll("path.area")
+                            .data([[]]).enter().append("circle")
+                            .attr("id", corner_name)
+                            .attr("r", 5 )
+                            .attr("cx", pointData[corner][0] )
+                            .attr("cy", pointData[corner][1] )
+                            .style("fill", "#5AC2E7")
+                            .style("fill-opacity", 0.5)
+                            .style("stroke", "#FFFFFF")
+                            .style("stroke-width", "2px")
+                            .on({
+                                mouseenter: function() {
+                                    toggleInfo(this, each)
+                                },
+                                mouseleave: function() {
+                                    toggleInfo()
+                                }
+                            })
+                    }
+                    // Add the SVG Text Element to the svgContainer
+                    svgContainer.selectAll("path.area")
+                        .data([[]]).enter().append("text")
+                        .attr("id", "title")
+                        .attr("x", $(window).width()/4)
+                        .attr("y", $(window).height()/2 + 20)
+                        .attr("text-anchor", "middle")
+                        .text( Math.round(each.temperature) )
+                        .attr("font-family", "sans-serif")
+                        .attr("font-size", "100px")
+                        .attr("fill", "white")
+                    svgContainer.selectAll("path.area")
+                        .data([[]]).enter().append("text")
+                        .attr("id", "subtitle")
+                        .attr("x", $(window).width()/4)
+                        .attr("y", $(window).height()/2 + 50)
+                        .attr("text-anchor", "middle")
+                        .text( "temperature" )
+                        .attr("font-family", "sans-serif")
+                        .attr("font-size", "20px")
+                        .attr("fill", "white")
+                    original_temp = Math.round(each.temperature);
+                    original_desc = "temperature";
                 }
             };
 
             // Get the weather
             var weather_url = "http://api.openweathermap.org/data/2.5/weather?q=" + city
-            $.ajax({url: weather_url})
-            .success( function(data) { console.log(data);
-                // Add the SVG Text Element to the svgContainer
-                svgContainer.selectAll("path.area")
-                    .data([[]]).enter().append("text")
-                    .attr("x", $(window).width()/4)
-                    .attr("y", $(window).height()/2 + 20)
-                    .attr("text-anchor", "middle")
-                    .text( parseInt(data.weather[0].icon, 10) )
-                    .attr("font-family", "sans-serif")
-                    .attr("font-size", "100px")
-                    .attr("fill", "white")
-                svgContainer.selectAll("path.area")
-                    .data([[]]).enter().append("text")
-                    .attr("x", $(window).width()/4)
-                    .attr("y", $(window).height()/2 + 50)
-                    .attr("text-anchor", "middle")
-                    .text( data.weather[0].description )
-                    .attr("font-family", "sans-serif")
-                    .attr("font-size", "20px")
-                    .attr("fill", "white")
+            $.ajax({ url: weather_url, dataType: 'jsonp', })
+            .success( function(data) {
+                // set globals
+                original_temp = Math.round( data.main.temp - 273.15 );
+                original_desc = data.weather[0].description;
             })
         });
+    }
+
+    toggleInfo = function(elem, data) {
+        if (elem) {
+            $('#title')[0].innerHTML = Math.round(data[elem.id]);
+            $('#subtitle')[0].innerHTML = elem.id;
+        }
+        else {
+            $('#title')[0].innerHTML = original_temp;
+            $('#subtitle')[0].innerHTML = original_desc;
+        }
     }
 
     createHex('Bangalore');
